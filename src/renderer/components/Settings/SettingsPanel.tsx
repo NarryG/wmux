@@ -688,9 +688,8 @@ const ORCHESTRATOR_MODEL_OPTIONS = [
 // (opencode/gemini) because an args-only binding is still enforceable for them —
 // but a row that cannot do what it looks like it does says so INLINE rather than
 // no-op'ing silently. Model entry is a datalist combobox, not a <select>: only
-// claude's aliases are known to us, and a codex model id (`gpt-5.5`) must be
-// typeable.
-const ROLE_BINDING_AGENTS = ['claude', 'codex', 'opencode', 'gemini'] as const;
+// claude's aliases are known to us, and a codex or OMP model id must be typeable.
+const ROLE_BINDING_AGENTS = ['claude', 'codex', 'opencode', 'gemini', 'omp'] as const;
 
 const ROLE_BINDING_FIELD_CLASS =
   'text-[11px] rounded px-1.5 py-1 font-mono bg-[color:var(--bg-surface)] ' +

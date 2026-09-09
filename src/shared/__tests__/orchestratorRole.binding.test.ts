@@ -390,9 +390,10 @@ describe('applyRoleBinding — spawnedProcess lifts the prose gate and nothing e
 });
 
 describe('launcherSupportsModelFlag', () => {
-  it('knows claude + codex, not gemini/aider', () => {
+  it('knows claude, codex, and OMP, not gemini/aider', () => {
     expect(launcherSupportsModelFlag('claude')).toBe(true);
     expect(launcherSupportsModelFlag('codex')).toBe(true);
+    expect(launcherSupportsModelFlag('omp')).toBe(true);
     expect(launcherSupportsModelFlag('gemini')).toBe(false);
     expect(launcherSupportsModelFlag('aider')).toBe(false);
   });

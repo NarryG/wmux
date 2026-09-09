@@ -8,8 +8,9 @@ import {
   permissionFlagFor,
   resumeGrammarFor,
 } from '../../../shared/agentResume';
+import { agentSlugToDisplay, isAgentSlug } from '../../../shared/agentIdentity';
 import { applyRoleBinding, type RoleBinding } from '../../../shared/orchestratorRole';
-
+// Agent display names come from the shared identity table, not slug casing.
 /**
  * Assemble the resume command for a pane from its binding + LIVE cwd
  * candidates. Mirrors the reboot-recovery pill's gates (Pane.tsx) so the two
@@ -116,7 +117,9 @@ export default function ResumeInfoChip(props: {
   if (!built) return null; // not a resumable agent — nothing to offer
   const { command } = built;
 
-  const agentName = binding.agent.charAt(0).toUpperCase() + binding.agent.slice(1);
+  const agentName = isAgentSlug(binding.agent)
+    ? agentSlugToDisplay(binding.agent)
+    : binding.agent.charAt(0).toUpperCase() + binding.agent.slice(1);
 
   const onRecover = (e: React.MouseEvent) => {
     e.stopPropagation();

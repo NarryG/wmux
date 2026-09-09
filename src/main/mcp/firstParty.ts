@@ -61,6 +61,9 @@ import { MAX_PLUGIN_NAME_LEN, NON_IDENTIFYING_CLIENT_NAMES } from '../../shared/
 //   - `opencode`           OpenCode              (verified 2026-07-22; clientInfo
 //                          name captured live from opencode 1.17.11 initialize —
 //                          issue #536)
+//   - `omp-coding-agent`   Oh My Pi              (verified 2026-09-09; clientInfo
+//                          name captured live from the installed OMP 18.1.15
+//                          session)
 //
 // New names MUST be captured empirically (the agent's actual clientInfo.name),
 // not guessed, and the agent must be confirmed to use the wmux tools end-to-end
@@ -69,6 +72,7 @@ export const FIRST_PARTY_CLIENT_NAMES: ReadonlySet<string> = new Set<string>([
   'claude-code',
   'codex-mcp-client',
   'opencode',
+  'omp-coding-agent',
 ]);
 
 // Names that may NEVER be promoted to first-party through config (#636). The

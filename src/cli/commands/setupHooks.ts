@@ -32,12 +32,13 @@ USAGE
 
 ACTIONS (mutually exclusive; default = install)
   (default)    Install or refresh Claude Code hooks, the Codex notify bridge,
-               and the OpenCode lifecycle plugin. Existing foreign hooks,
-               notify commands, and plugin files are never overwritten.
-               Re-running KEEPS the hook profile already on disk.
+               the OpenCode lifecycle plugin, and the Oh My Pi extension.
+               Existing foreign hooks, notify commands, and plugin files are
+               never overwritten. Re-running KEEPS the hook profile already on
+               disk.
   --remove     Remove only wmux-owned Claude hook entries (legacy behavior;
-               Codex/OpenCode files and foreign configuration are untouched).
-  --status     Report Claude, Codex, and OpenCode lifecycle integration status.
+               Codex/OpenCode/OMP files and foreign configuration are untouched).
+  --status     Report Claude, Codex, OpenCode, and OMP lifecycle integration status.
 
 HOOK PROFILE (install only; mutually exclusive)
   --signals-only  Install the lifecycle signals and the approval card WITHOUT
@@ -1377,6 +1378,7 @@ export async function handleSetupHooks(args: string[], jsonMode: boolean): Promi
       } else {
         console.log(`codex notify: NOT registered (${integrations.codexNotify.configPath})`);
       }
+      printAssetStatus('omp extension', integrations.ompExtension);
       printAssetStatus('opencode plugin', integrations.opencodePlugin);
     }
     // Keep the existing scripted contract: status is non-zero only when the
@@ -1387,7 +1389,7 @@ export async function handleSetupHooks(args: string[], jsonMode: boolean): Promi
   }
 
   // Run each integration independently so a corrupt Claude settings file does
-  // not prevent safe Codex/OpenCode installation (and vice versa).
+  // not prevent safe Codex/OpenCode/OMP installation (and vice versa).
   const claude = installHooks(paths, requestedProfile);
   const integrations = lifecycle.installLifecycleIntegrations(lifecyclePaths);
   const outcome = {
@@ -1417,6 +1419,10 @@ export async function handleSetupHooks(args: string[], jsonMode: boolean): Promi
     printAssetInstall('opencode plugin', integrations.opencodePlugin);
     if (integrations.opencodePlugin.action !== 'none') {
       console.log('Restart existing OpenCode sessions so they load the wmux plugin.');
+    }
+    printAssetInstall('omp extension', integrations.ompExtension);
+    if (integrations.ompExtension.action !== 'none') {
+      console.log('Restart OMP sessions so they load the wmux extension.');
     }
   }
   if (!outcome.ok) process.exit(1);

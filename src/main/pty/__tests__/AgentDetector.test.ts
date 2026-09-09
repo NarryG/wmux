@@ -386,6 +386,40 @@ describe('AgentDetector', () => {
     });
   });
 
+  describe('Oh My Pi (live capture 2026-09-09)', () => {
+    it('opens the gate on the omp banner and reports the boxed ready row', () => {
+      const det = new AgentDetector();
+      const cb = vi.fn();
+      det.onEvent(cb);
+      det.feed('╭─── omp v18.1.15 ───────────────────────────────╮\n');
+      det.feed('╭── π  > ◉ GPT-5.6-Luna > 📁 ~/Dev/wmux ╮\n');
+      expect(det.getLastAgent()).toBe('Oh My Pi');
+      const statuses = cb.mock.calls.map((c) => (c[0] as { status: string }).status);
+      expect(statuses).toContain('running');
+      expect(statuses).toContain('waiting');
+    });
+    it('recognizes the OMP OSC title after the welcome box scrolls away', () => {
+      const det = new AgentDetector();
+      const cb = vi.fn();
+      det.onEvent(cb);
+      det.feed('\x1b]0;π : Commit and push\x07');
+      expect(det.getLastAgent()).toBe('Oh My Pi');
+      expect(cb).toHaveBeenCalledWith(expect.objectContaining({
+        agent: 'Oh My Pi',
+        status: 'running',
+      }));
+    });
+
+    it('does not open the gate on a prose mention', () => {
+      const det = new AgentDetector();
+      const cb = vi.fn();
+      det.onEvent(cb);
+      det.feed('This document mentions omp v18.1.15 as an example.\n');
+      expect(det.getLastAgent()).toBeNull();
+      expect(cb).not.toHaveBeenCalled();
+    });
+  });
+
   describe('feed() line splitting', () => {
     it('splits on \\n', () => {
       const det = new AgentDetector();

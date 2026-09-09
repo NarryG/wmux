@@ -270,6 +270,112 @@ export function stageRootIcon(execPath: string): string | null {
   }
 }
 
+function startMenuPaths(appData: string): { programs: string; shortcut: string } {
+  const programs = path.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+  return { programs, shortcut: path.join(programs, 'wmux.lnk') };
+}
+
+/**
+ * Build the fallback Start Menu registration script. Squirrel normally owns
+ * this link through `Update.exe --createShortcut`; the fallback covers repaired
+ * or incomplete installs where the local `packages\RELEASES` metadata is absent.
+ * A same-name shortcut targeting another root is foreign and is preserved.
+ *
+ * Complete Squirrel installs use the version-independent root stub. An
+ * incomplete install may not have that stub, so the current hook executable is
+ * used as a versioned fallback and refreshed on the next installer event.
+ */
+export function buildStartMenuShortcutScript(
+  rootDir: string,
+  appData: string,
+  executablePath = path.join(rootDir, 'wmux.exe'),
+): string | null {
+  const { programs, shortcut } = startMenuPaths(appData);
+  const paths = [rootDir, appData, programs, shortcut, executablePath];
+  if (!paths.every(isSafePsPathLiteral)) return null;
+  return [
+    `$ErrorActionPreference = 'Stop'`,
+    `$root = ${psQuote(rootDir)}`,
+    `$programs = ${psQuote(programs)}`,
+    `$shortcut = ${psQuote(shortcut)}`,
+    `$stub = Join-Path $root 'wmux.exe'`,
+    `$target = if (Test-Path -LiteralPath $stub) { $stub } else { ${psQuote(executablePath)} }`,
+    `if (-not (Test-Path -LiteralPath $target)) { exit 2 }`,
+    `if (-not (Test-Path -LiteralPath $programs)) { New-Item -ItemType Directory -Path $programs -Force | Out-Null }`,
+    `$sh = New-Object -ComObject WScript.Shell`,
+    `if (Test-Path -LiteralPath $shortcut) {`,
+    `  $existing = $sh.CreateShortcut($shortcut)`,
+    `  $existingTarget = $existing.TargetPath`,
+    `  if (-not $existingTarget -or -not $existingTarget.StartsWith($root + '\\', [System.StringComparison]::OrdinalIgnoreCase)) { exit 0 }`,
+    `}`,
+    `$link = $sh.CreateShortcut($shortcut)`,
+    `$link.TargetPath = $target`,
+    `$link.WorkingDirectory = $root`,
+    `$icon = Join-Path $root 'app.ico'`,
+    `if (Test-Path -LiteralPath $icon) { $link.IconLocation = "$icon,0" }`,
+    `$link.Description = 'wmux - AI Agent Terminal'`,
+    `$link.Save()`,
+  ].join('\n');
+}
+
+function buildRemoveStartMenuShortcutScript(rootDir: string, appData: string): string | null {
+  const { shortcut } = startMenuPaths(appData);
+  const paths = [rootDir, appData, shortcut];
+  if (!paths.every(isSafePsPathLiteral)) return null;
+  return [
+    `$ErrorActionPreference = 'Stop'`,
+    `$root = ${psQuote(rootDir)}`,
+    `$shortcut = ${psQuote(shortcut)}`,
+    `if (-not (Test-Path -LiteralPath $shortcut)) { exit 0 }`,
+    `$sh = New-Object -ComObject WScript.Shell`,
+    `$link = $sh.CreateShortcut($shortcut)`,
+    `$target = $link.TargetPath`,
+    `if (-not $target -or -not $target.StartsWith($root + '\\', [System.StringComparison]::OrdinalIgnoreCase)) { exit 0 }`,
+    `Remove-Item -LiteralPath $shortcut -Force`,
+  ].join('\n');
+}
+
+function runStartMenuShortcutScript(script: string): boolean {
+  const systemRoot = process.env.SystemRoot || 'C:\\Windows';
+  const powershell = path.join(
+    systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe',
+  );
+  try {
+    execFileSync(powershell, ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf-8',
+      timeout: 5_000,
+      windowsHide: true,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ensure a user-visible Start Menu entry exists even when Squirrel cannot read
+ * its local release metadata. Best-effort and win32-only.
+ */
+export function ensureStartMenuShortcut(execPath: string): boolean {
+  if (process.platform !== 'win32') return false;
+  const appData = process.env.APPDATA;
+  if (!appData) return false;
+  const { shortcut } = startMenuPaths(appData);
+  if (fs.existsSync(shortcut)) return true;
+  const script = buildStartMenuShortcutScript(rootFromExecPath(execPath), appData, execPath);
+  return script ? runStartMenuShortcutScript(script) : false;
+}
+
+/** Remove only the fallback link owned by this wmux install. */
+export function removeStartMenuShortcut(execPath: string): boolean {
+  if (process.platform !== 'win32') return false;
+  const appData = process.env.APPDATA;
+  if (!appData) return false;
+  const script = buildRemoveStartMenuShortcutScript(rootFromExecPath(execPath), appData);
+  return script ? runStartMenuShortcutScript(script) : false;
+}
+
+
 /** One powershell run: the script's stdout, or why it did not produce any. */
 type RunOutcome = { stdout: string } | { failure: string; retryable: boolean };
 

@@ -211,6 +211,29 @@ describe('toResumeCommand (X6)', () => {
     });
   });
 
+  describe('omp — flag resume grammar', () => {
+    const obind = (over: Partial<ResumeBinding> = {}): ResumeBinding => ({
+      ...binding(),
+      agent: 'omp',
+      sessionId: 'omp-session',
+      ...over,
+    });
+
+    it('omp → omp --continue (fallback)', () => {
+      expect(toResumeCommand('omp')).toBe('omp --continue');
+    });
+
+    it('binding + cwd match → omp --resume <id>', () => {
+      expect(toResumeCommand('omp', obind(), CWD)).toBe('omp --resume omp-session');
+    });
+
+    it('preserves trailing flags after exact OMP resume', () => {
+      expect(toResumeCommand('omp --model gpt-5.6', obind(), CWD)).toBe(
+        'omp --resume omp-session --model gpt-5.6',
+      );
+    });
+  });
+
   describe('codex — subcommand resume grammar (resume <id> / resume --last)', () => {
     const cbind = (over: Partial<ResumeBinding> = {}): ResumeBinding => ({
       agent: 'codex',

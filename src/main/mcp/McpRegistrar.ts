@@ -11,6 +11,7 @@ import { canConnectBrokerPipe } from './brokerProbe';
 import { stabilizeMcpBundle } from './stabilizeBundle';
 import { CODEX_NOTIFY_BASENAME } from '../../shared/configIO';
 import {
+  OMP_EXTENSION_BUNDLE_BASENAME,
   OPENCODE_PLUGIN_BUNDLE_BASENAME,
   installLifecycleAsset,
   resolveLifecycleIntegrationPaths,
@@ -29,7 +30,7 @@ import {
 
 /** Per-server registration state surfaced via getStatus(). */
 export type McpServerStatus = ServerRegState;
-/** Registration state for a single agent target (Claude / Codex / Gemini). */
+/** Registration state for a single agent target (Claude / Codex / Gemini / OMP). */
 export type McpTargetStatus = TargetRegStatus;
 
 /** Aggregate snapshot of MCP integration state for CLI / Settings UI. */
@@ -46,18 +47,18 @@ export interface McpRegistrarStatus {
  * orchestration lives in `shared/mcpRegistration` so this class and the
  * `wmux mcp` CLI behave identically; this class adds the Electron-specific
  * bundle-path resolution, the auth-token write, and macOS error hints.
- *
  * Targets (see `shared/mcpTargets.ts`):
  *   - Claude Code  ~/.claude.json          (JSON, created on demand)
  *   - Codex CLI    ~/.codex/config.toml     (TOML, only if installed)
  *   - Gemini CLI   ~/.gemini/settings.json  (JSON, only if installed; unverified)
+ *   - Oh My Pi     ~/.omp/agent/mcp.json    (JSON, only if installed)
  *
  * EMPIRICAL GATE: a non-Claude target is only written when its config already
  * exists (the CLI is installed) and is shipped as `verified` only after the
  * agent was confirmed to discover AND use the wmux tools end-to-end — which
  * additionally requires the agent's MCP `clientName` to be first-party
  * recognized by the daemon enforcer (`firstParty.ts`). Codex (`codex-mcp-client`)
- * was verified 2026-06-15.
+ * and OMP (`omp-coding-agent`) are verified.
  *
  * NOTE (macOS Claude Desktop `~/Library/Application Support/Claude/`): still
  * pending empirical verification — out of scope, do not add speculatively.
@@ -236,6 +237,11 @@ export class McpRegistrar {
         this.installOpenCodePlugin();
       } catch (err) {
         console.error('[McpRegistrar] OpenCode plugin installation failed:', err);
+      }
+      try {
+        this.installOmpExtension();
+      } catch (err) {
+        console.error('[McpRegistrar] OMP extension installation failed:', err);
       }
 
       this.registered = true;
@@ -451,6 +457,42 @@ export class McpRegistrar {
     }
     if (installed.action !== 'none') {
       console.log(`[McpRegistrar] OpenCode lifecycle plugin ${installed.action} → ${dest}`);
+    }
+  }
+  /** Resolve the bundled OMP extension in packaged and development layouts. */
+  private getOmpExtensionSourcePath(devSource: string | null): string | null {
+    if (app.isPackaged) {
+      const bundled = path.join(
+        process.resourcesPath,
+        'cli-bundle',
+        OMP_EXTENSION_BUNDLE_BASENAME,
+      );
+      return fs.existsSync(bundled) ? bundled : null;
+    }
+    return devSource;
+  }
+
+  /**
+   * Install/refresh the global OMP lifecycle extension only when OMP's agent
+   * directory already exists (or wmux previously installed the destination).
+   */
+  private installOmpExtension(): void {
+    const spec = resolveLifecycleIntegrationPaths(this.home, app.getAppPath()).omp;
+    const dest = spec.destinationPath;
+    const agentRoot = path.dirname(path.dirname(dest));
+    if (!fs.existsSync(agentRoot) && !fs.existsSync(dest)) return;
+
+    const installed = installLifecycleAsset({
+      ...spec,
+      sourcePath: this.getOmpExtensionSourcePath(spec.sourcePath),
+    });
+    if (installed.state !== 'current') {
+      const detail = installed.error ? `: ${installed.error}` : '';
+      console.warn(`[McpRegistrar] OMP lifecycle extension ${installed.state}; left ${dest} untouched${detail}`);
+      return;
+    }
+    if (installed.action !== 'none') {
+      console.log(`[McpRegistrar] OMP lifecycle extension ${installed.action} → ${dest}`);
     }
   }
 }

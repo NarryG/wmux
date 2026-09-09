@@ -758,6 +758,7 @@ describe('ChannelWakeWorker — body preview + inject outcome', () => {
     it('mayCarryBody names agent TUIs only', () => {
       expect(mayCarryBody('claude')).toBe(true);
       expect(mayCarryBody('codex')).toBe(true);
+      expect(mayCarryBody('omp')).toBe(true);
       expect(mayCarryBody('zsh')).toBe(false);
       expect(mayCarryBody('')).toBe(false);
       expect(mayCarryBody(undefined)).toBe(false);

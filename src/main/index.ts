@@ -250,6 +250,7 @@ if (process.platform === 'win32') {
           // --createShortcut has run. Repairing first would retarget the legacy
           // link instead of removing it and leave two Start Menu entries.
           try { shortcutHygiene.repairInstalledShortcuts(process.execPath); } catch { /* best-effort */ }
+          try { shortcutHygiene.ensureStartMenuShortcut(process.execPath); } catch { /* best-effort */ }
           // Auto-launch app after install
           spawn(process.execPath, [], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
           process.exit(0);
@@ -270,13 +271,14 @@ if (process.platform === 'win32') {
       let updateIcon: string | null = null;
       try { updateIcon = shortcutHygiene.stageRootIcon(process.execPath); } catch { /* best-effort */ }
 
-      const updateShortcutArgs = ['--createShortcut', target];
+      const updateShortcutArgs = ['--createShortcut', target, '--shortcut-locations', 'Desktop,StartMenu'];
       if (updateIcon) updateShortcutArgs.push('--icon', updateIcon);
       spawn(updateExe, updateShortcutArgs, { detached: true, windowsHide: true })
         .on('close', () => {
           // Repair after the canonical links are written — see the install
           // branch for why the ordering is load-bearing.
           try { shortcutHygiene.repairInstalledShortcuts(process.execPath); } catch { /* best-effort */ }
+          try { shortcutHygiene.ensureStartMenuShortcut(process.execPath); } catch { /* best-effort */ }
           // #502: relaunch the updated app — the pre-update instance was
           // taken down above (or quit itself in the in-app "Restart to
           // install" flow), and the single-instance lock dedupes if
@@ -293,7 +295,10 @@ if (process.platform === 'win32') {
       try { cliShim.uninstallCliShim(process.execPath); } catch { /* best-effort */ }
 
       spawn(updateExe, ['--removeShortcut', target], { detached: true, windowsHide: true })
-        .on('close', () => process.exit(0));
+        .on('close', () => {
+          try { shortcutHygiene.removeStartMenuShortcut(process.execPath); } catch { /* best-effort */ }
+          process.exit(0);
+        });
       app.quit();
     } else if (squirrelCmd === '--squirrel-obsolete') {
       process.exit(0);
@@ -461,7 +466,20 @@ const autoUpdater = new AutoUpdater(() => mainWindow, {
 // (icudtl.dat missing) cannot reach any in-app check by definition; the
 // install waiter's post-exit verification (installTeardown.ts) covers it on
 // the update path.
-void app.whenReady().then(() => { try { warnOnInstallIntegrityGap(); } catch { /* best-effort */ } });
+void app.whenReady().then(() => {
+  try { warnOnInstallIntegrityGap(); } catch { /* best-effort */ }
+  // Existing installs can miss Squirrel's shortcut event when their local
+  // `packages\RELEASES` metadata is incomplete. Repair the user-visible entry
+  // once after the packaged app is ready; the helper is a no-op when present.
+  if (process.platform === 'win32' && app.isPackaged) {
+    setImmediate(() => {
+      try {
+        shortcutHygiene.stageRootIcon(process.execPath);
+        shortcutHygiene.ensureStartMenuShortcut(process.execPath);
+      } catch { /* best-effort */ }
+    });
+  }
+});
 
 // ── Promoted browser flows: the idle sweep ─────────────────────────────────
 //

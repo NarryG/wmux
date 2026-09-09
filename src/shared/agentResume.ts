@@ -23,7 +23,7 @@
  * Resume is cwd-scoped, so the caller MUST only apply this when the original
  * cwd still exists — otherwise it would resume an unrelated session.
  *
- * v1 covers `claude` and `codex`. opencode/gemini/aider/copilot are a
+ * v1 covers `claude`, `codex`, and `omp`. opencode/gemini/aider/copilot are a
  * deliberate follow-up (their resume ergonomics differ); their absence from
  * RESUME_BY_LAUNCHER also gates the resume pill (resumeOfferForRecovered) so we
  * never offer a resume we cannot actually perform.
@@ -52,6 +52,7 @@ interface ResumeGrammar {
 const RESUME_BY_LAUNCHER: Readonly<Record<string, ResumeGrammar>> = {
   claude: { fallback: '--continue', withId: (id) => `--resume ${id}` },
   codex: { fallback: 'resume --last', withId: (id) => `resume ${id}` },
+  omp: { fallback: '--continue', withId: (id) => `--resume ${id}` },
 };
 
 /**

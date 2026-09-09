@@ -4,6 +4,8 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   CODEX_NOTIFY_MANAGED_MARKER,
+  OMP_EXTENSION_LEGACY_MARKER,
+  OMP_EXTENSION_MANAGED_MARKER,
   OPENCODE_PLUGIN_MANAGED_MARKER,
   findLifecycleAssetSourceFrom,
   inspectLifecycleAsset,
@@ -199,12 +201,13 @@ describe('findLifecycleAssetSourceFrom — source resolution prefers live checko
 });
 
 describe('resolveLifecycleIntegrationPaths — destination + marker wiring', () => {
-  it('resolves codex + opencode destinations and carries ownership markers', () => {
+  it('resolves codex, opencode, and OMP destinations with ownership markers', () => {
     const paths = resolveLifecycleIntegrationPaths(home, home);
     expect(paths.codex.destinationPath).toBe(path.join(home, '.wmux', 'hooks', CODEX_NOTIFY_BASENAME));
     expect(paths.codex.ownershipMarkers).toContain(CODEX_NOTIFY_MANAGED_MARKER);
     expect(paths.opencode.destinationPath).toBe(path.join(home, '.config', 'opencode', 'plugins', 'wmux.js'));
-    expect(paths.opencode.ownershipMarkers).toEqual([OPENCODE_PLUGIN_MANAGED_MARKER, 'wmux ↔ OpenCode plugin bridge']);
+    expect(paths.omp.destinationPath).toBe(path.join(home, '.omp', 'agent', 'extensions', 'wmux.ts'));
+    expect(paths.omp.ownershipMarkers).toEqual([OMP_EXTENSION_MANAGED_MARKER, OMP_EXTENSION_LEGACY_MARKER]);
   });
 
   it('honors XDG_CONFIG_HOME for the opencode plugin destination', () => {
@@ -298,5 +301,25 @@ describe('installLifecycleIntegrations — aggregation + codexNotify gating', ()
     expect(outcome.codexNotify).not.toBeNull();
     expect(outcome.codexNotify!.skipped).toBeNull();
     expect(outcome.ok).toBe(true);
+  });
+
+  it('installs the OMP extension only when the OMP agent directory exists', () => {
+    const paths = resolveLifecycleIntegrationPaths(home, home);
+    const codexSrc = path.join(home, 'codex-src.mjs');
+    const opencodeSrc = path.join(home, 'opencode-src.js');
+    const ompSrc = path.join(home, 'omp-src.ts');
+    fs.writeFileSync(codexSrc, SOURCE_TEXT, 'utf8');
+    fs.writeFileSync(opencodeSrc, SOURCE_TEXT, 'utf8');
+    fs.writeFileSync(ompSrc, `${OMP_EXTENSION_MANAGED_MARKER}\nexport default () => {};\n`, 'utf8');
+    paths.codex = { ...paths.codex, sourcePath: codexSrc };
+    paths.opencode = { ...paths.opencode, sourcePath: opencodeSrc };
+    paths.omp = { ...paths.omp, sourcePath: ompSrc };
+    fs.mkdirSync(path.dirname(path.dirname(paths.omp.destinationPath)), { recursive: true });
+
+    const ompOutcome = installLifecycleIntegrations(paths);
+
+    expect(ompOutcome.ompExtension.state).toBe('current');
+    expect(ompOutcome.ompExtension.action).toBe('installed');
+    expect(fs.readFileSync(paths.omp.destinationPath, 'utf8')).toContain(OMP_EXTENSION_MANAGED_MARKER);
   });
 });

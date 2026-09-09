@@ -7,6 +7,7 @@ import * as path from 'node:path';
 import {
   isSafePsPathLiteral,
   buildRepairScript,
+  buildStartMenuShortcutScript,
   parseRepairOutput,
   defaultRepairLocations,
   runShortcutRepairPass,
@@ -74,6 +75,27 @@ describe('buildRepairScript', () => {
     expect(s).toContain("Join-Path $root 'app.ico'");
     // Deletion is reserved for the legacy list; pins are never removed.
     expect(s).toContain('$legacy -icontains $p');
+  });
+});
+
+describe('buildStartMenuShortcutScript', () => {
+  it('creates a root-stub Start Menu link and preserves foreign links', () => {
+    const root = 'C:\\Users\\u\\AppData\\Local\\wmux';
+    const appData = 'C:\\Users\\u\\AppData\\Roaming';
+    const executable = `${root}\\app-3.52.0\\wmux.exe`;
+    const script = buildStartMenuShortcutScript(root, appData, executable);
+    expect(script).not.toBeNull();
+    expect(script).toContain("Join-Path $root 'wmux.exe'");
+    expect(script).toContain('Start Menu');
+    expect(script).toContain('CreateShortcut');
+    expect(script).toContain('StartsWith($root');
+    expect(script).toContain(`else { '${executable}' }`);
+  });
+
+  it('refuses paths with line terminators before building PowerShell', () => {
+    expect(
+      buildStartMenuShortcutScript('C:\\wmux\nx', 'C:\\Users\\u\\AppData\\Roaming'),
+    ).toBeNull();
   });
 });
 

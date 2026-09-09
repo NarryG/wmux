@@ -162,6 +162,11 @@ describe('selectAgentProcess', () => {
     const table = [entry(200, SHELL, 'kiro-cli')];
     expect(selectAgentProcess(table, SHELL)).toEqual({ pid: 200, slug: 'kiro' });
   });
+
+  it('recognizes the native OMP executable', () => {
+    const table = [entry(200, SHELL, 'omp.exe')];
+    expect(selectAgentProcess(table, SHELL)).toEqual({ pid: 200, slug: 'omp' });
+  });
 });
 
 // ── tracker lifecycle ────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ let home = '';
 const claudeTarget = getMcpTarget('claude')!;
 const codexTarget = getMcpTarget('codex')!;
 const geminiTarget = getMcpTarget('gemini')!;
+const ompTarget = getMcpTarget('omp')!;
 const WMUX_SCRIPT = 'C:\\app\\mcp-bundle\\index.js';
 
 beforeEach(() => {
@@ -63,6 +64,27 @@ describe('registerTarget — Claude (json, createIfMissing)', () => {
     const after = JSON.parse(fs.readFileSync(p, 'utf8')) as { mcpServers: Record<string, unknown> };
     expect(after.mcpServers['wmux-a2a']).toBeUndefined();
     expect(after.mcpServers.wmux).toBeTruthy();
+  });
+});
+
+describe('registerTarget — OMP (json, existing config only)', () => {
+  it('adds wmux to OMP agent/mcp.json without creating a missing config', () => {
+    const missing = registerTarget(ompTarget, home, WMUX_SCRIPT);
+    expect(missing.skipped).toBe('absent');
+    expect(fs.existsSync(ompTarget.configPath(home))).toBe(false);
+
+    const configPath = ompTarget.configPath(home);
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, JSON.stringify({ mcpServers: { foreign: { command: 'node', args: ['/x.js'] } } }), 'utf8');
+    const result = registerTarget(ompTarget, home, WMUX_SCRIPT);
+
+    expect(result.skipped).toBeNull();
+    expect(result.wrote).toEqual(['wmux']);
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      mcpServers: Record<string, { command: string; args: string[] }>;
+    };
+    expect(parsed.mcpServers.foreign).toBeDefined();
+    expect(parsed.mcpServers.wmux).toEqual({ command: 'node', args: [WMUX_SCRIPT] });
   });
 });
 
@@ -386,10 +408,12 @@ describe('unregisterTarget', () => {
 
 describe('MCP_TARGETS registry', () => {
   it('has the expected ids, formats, and create policy', () => {
-    expect(MCP_TARGETS.map((t) => t.id)).toEqual(['claude', 'codex', 'gemini']);
+    expect(MCP_TARGETS.map((t) => t.id)).toEqual(['claude', 'codex', 'gemini', 'omp']);
     expect(getMcpTarget('claude')!.createIfMissing).toBe(true);
     expect(getMcpTarget('codex')!.createIfMissing).toBe(false);
     expect(getMcpTarget('codex')!.format).toBe('toml');
     expect(getMcpTarget('gemini')!.createIfMissing).toBe(false);
+    expect(getMcpTarget('omp')!.createIfMissing).toBe(false);
+    expect(getMcpTarget('omp')!.format).toBe('json');
   });
 });

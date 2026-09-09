@@ -168,7 +168,7 @@ winget install openwong2kim.wmux
 
 **Notifications** — output-throughput activity detection (not pattern matching, works with any agent), native OS toasts + taskbar flash (Windows) / Dock & menu-bar tray (macOS), process-exit alerts, notification panel (`Ctrl+I`), Web Audio cues.
 
-**Agent detection** — any CLI agent runs in a pane (each pane is a plain PTY; nothing depends on detection). Claude Code, Codex CLI, Gemini CLI, Aider, OpenCode, and GitHub Copilot CLI additionally get first-class detection: start → activates monitoring, warns on critical actions.
+**Agent detection** — any CLI agent runs in a pane (each pane is a plain PTY; nothing depends on detection). Claude Code, Codex CLI, Gemini CLI, Aider, OpenCode, GitHub Copilot CLI, and Oh My Pi additionally get first-class detection: start → activates monitoring, lifecycle hooks provide deterministic turn state when available, and critical actions raise approval warnings.
 
 **Per-session prompt schedules** — from a detected agent pane, queue an exact prompt for a local future time or use the +1h / +5h / +24h shortcuts; one-shot and repeating schedules persist across app restarts. Delivery is bound to the original PTY, its daemon-minted non-reusable incarnation, and the detected agent family; it waits while a turn or approval is active and uses safe bracketed paste before submit. Existing schedules remain manageable while their agent is unavailable, and a replaced session is paused visibly instead of being retargeted.
 
@@ -223,7 +223,7 @@ Electron Main          Renderer (React 19 + Zustand)     Daemon (standalone)
 
 **Can I reach my panes from my phone?** Yes — `wmux web` serves your live panes to a browser (PWA-installable). It is **read-only and loopback-only by default**; `--allow-input` and network exposure are explicit opt-ins. For HTTPS, use the one-command `wmux web --tailscale` path, or terminate it directly with `wmux web --expose --tls-cert <fullchain.pem> --tls-key <privkey.pem>` (add `--allow-host <certificate-dns-name>` so requests for that name are accepted and it is advertised in URLs). Re-supply both TLS paths when re-running the CLI to change options; a CLI start without them and without `--tailscale` explicitly selects HTTP. Bare `--expose` remains HTTP and prints an explicit cleartext warning. Even read-only shows a pane's full scrollback to whoever can reach the port, so do not publish it to the open internet. You can also attach a remote machine's `wmux web` into your own desktop app's sidebar and mirror its panes locally — see [Attach a remote machine's workspaces](docs/how-to/remote-workspaces.md).
 
-**Works with Claude Code / Codex / Gemini?** Yes. wmux auto-detects them and registers an MCP server so they can drive the browser and read terminal output.
+**Works with Claude Code / Codex / Gemini / OMP?** Yes. wmux auto-detects them, registers an MCP server, and installs deterministic lifecycle bridges where the agent supports them so they can drive the browser and read terminal output.
 
 **Multiple agents at once?** Yes. Each pane is an independent PTY, and agents coordinate over A2A MCP tools — message each other, delegate tasks by pane, reply to the exact pane that asked, and gate any cross-agent code execution behind your approval.
 

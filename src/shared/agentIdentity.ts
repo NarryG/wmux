@@ -3,11 +3,11 @@
 //
 // Why this file exists
 // --------------------
-// The eight agent slugs used to be written out by hand in SEVEN places, and the
+// The agent slugs used to be written out by hand in SEVEN places, and the
 // slug<->display maps in two more, each carrying a comment telling the next
 // person to keep the others in lock-step. That is exactly as reliable as it
-// sounds: `src/renderer/channels/agentCandidateSeed.ts` shipped with SEVEN of
-// the eight (`openclaude` missing) and nothing caught it, because
+// sounds: `src/renderer/channels/agentCandidateSeed.ts` once omitted an agent
+// and nothing caught it, because
 // `] satisfies AgentSlug[]` rejects EXTRA members but never OMISSIONS.
 //
 // The duplication used to have a stated reason -- "src/shared is the only
@@ -54,6 +54,7 @@ export const AGENT_IDENTITIES = [
   { slug: 'openclaude', display: 'OpenClaude' },
   { slug: 'kiro', display: 'Kiro CLI' },
   { slug: 'grok', display: 'Grok' },
+  { slug: 'omp', display: 'Oh My Pi' },
 ] as const;
 
 /** SLUG-form agent identifier. Derived, so it can never drift from the table. */

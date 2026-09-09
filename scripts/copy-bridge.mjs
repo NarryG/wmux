@@ -19,6 +19,7 @@ const destDir = join(repoRoot, 'dist', 'cli-bundle');
 //   - Claude Code hook/statusline bridges
 //   - Codex lifecycle notify bridge
 //   - OpenCode lifecycle plugin (renamed in the bundle to avoid generic wmux.js)
+//   - Oh My Pi lifecycle extension (OMP loads TypeScript directly)
 const bridges = [
   {
     src: join(repoRoot, 'integrations', 'claude', 'bin', 'wmux-bridge.mjs'),
@@ -35,6 +36,10 @@ const bridges = [
   {
     src: join(repoRoot, 'integrations', 'opencode', 'plugins', 'wmux.js'),
     dest: 'wmux-opencode-plugin.js',
+  },
+  {
+    src: join(repoRoot, 'integrations', 'omp', 'wmux.ts'),
+    dest: 'wmux-omp-extension.ts',
   },
 ];
 

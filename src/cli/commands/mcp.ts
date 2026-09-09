@@ -20,10 +20,10 @@ import type { WmuxMcpEntryProfile } from '../../shared/configIO';
 /**
  * `wmux mcp …` — inspect / manage MCP registration across the installed agent
  * CLIs (Claude `~/.claude.json`, Codex `~/.codex/config.toml`, Gemini
- * `~/.gemini/settings.json`) without touching the running wmux daemon. Reading
- * and editing the configs directly means the user can verify the integration
- * even when the GUI app is not running (DX-D4: CLI as a one-line verification
- * path; Settings panel as the GUI parity).
+ * `~/.gemini/settings.json`, OMP `~/.omp/agent/mcp.json`) without touching the
+ * running wmux daemon. Reading and editing the configs directly means the user
+ * can verify the integration even when the GUI app is not running (DX-D4: CLI
+ * as a one-line verification path; Settings panel as the GUI parity).
  *
  * Shares the per-target orchestration with the main-process McpRegistrar via
  * `shared/mcpRegistration`, so behavior is identical. Non-installed agents are
@@ -51,8 +51,7 @@ SUBCOMMANDS
   unregister   Remove the wmux key from each agent config.
                Other entries are left untouched.
 
-OPTIONS
-  --target <id>  Limit to one agent: claude | codex | gemini (default: all).
+  --target <id>  Limit to one agent: claude | codex | gemini | omp (default: all).
   --profile <p>  register only. Tool surface the registered server launches
                  with: full | core (default: full).
                    full  every tool, including the browser family.

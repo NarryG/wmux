@@ -1,10 +1,10 @@
 // Canonical agent signal envelope.
 //
-// Any AI coding agent (Claude Code, Codex, Gemini, Aider, OpenCode, Copilot)
-// that integrates with wmux via the hook plugin pattern emits signals
+// Any AI coding agent (Claude Code, Codex, Gemini, Aider, OpenCode, Copilot,
+// Oh My Pi) that integrates with wmux via the hook plugin pattern emits signals
 // shaped like AgentSignal. HookSignalRouter dispatches on `kind`, never
-// on `agent`. Per-agent quirks live in the bridge script that translates
-// the agent's native hook payload into this envelope.
+// on `agent`. Per-agent quirks live in the bridge script that translates the
+// agent's native hook payload into this envelope.
 //
 // This file is wmux-INTERNAL. Bridge scripts in integrations/<agent>/bin/
 // are .mjs (self-contained, no TS imports possible from the plugin runtime).

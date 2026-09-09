@@ -30,10 +30,10 @@ vi.mock('../brokerProbe', () => ({ canConnectBrokerPipe: vi.fn() }));
 import { McpRegistrar, type McpRegistrarStatus, type McpTargetStatus } from '../McpRegistrar';
 import { canConnectBrokerPipe } from '../brokerProbe';
 import { secureWriteTokenFile } from '../../../shared/security';
-
 const claudeJson = () => path.join(tmpHome, '.claude.json');
 const codexToml = () => path.join(tmpHome, '.codex', 'config.toml');
 const geminiJson = () => path.join(tmpHome, '.gemini', 'settings.json');
+const ompJson = () => path.join(tmpHome, '.omp', 'agent', 'mcp.json');
 const target = (s: McpRegistrarStatus, id: string): McpTargetStatus =>
   s.targets.find((t) => t.id === id) as McpTargetStatus;
 
@@ -47,7 +47,7 @@ afterEach(() => {
 describe('McpRegistrar.getStatus (multi-target)', () => {
   it('reports every target as not registered when no configs exist', () => {
     const status = new McpRegistrar().getStatus();
-    expect(status.targets.map((t) => t.id).sort()).toEqual(['claude', 'codex', 'gemini']);
+    expect(status.targets.map((t) => t.id).sort()).toEqual(['claude', 'codex', 'gemini', 'omp']);
     for (const t of status.targets) {
       expect(t.configExists).toBe(false);
       expect(t.configModified).toBeNull();
@@ -55,6 +55,7 @@ describe('McpRegistrar.getStatus (multi-target)', () => {
     }
     expect(target(status, 'claude').configPath).toBe(claudeJson());
     expect(target(status, 'codex').configPath).toBe(codexToml());
+    expect(target(status, 'omp').configPath).toBe(ompJson());
   });
 
   it('does NOT create any config file as a side effect of getStatus', () => {
@@ -106,11 +107,12 @@ describe('McpRegistrar.getStatus (multi-target)', () => {
     expect(target(status, 'codex').wmux.registered).toBe(false);
   });
 
-  it('marks claude/codex verified and gemini unverified', () => {
+  it('marks claude/codex/omp verified and gemini unverified', () => {
     const status = new McpRegistrar().getStatus();
     expect(target(status, 'claude').verified).toBe(true);
     expect(target(status, 'codex').verified).toBe(true);
     expect(target(status, 'gemini').verified).toBe(false);
+    expect(target(status, 'omp').verified).toBe(true);
   });
 });
 

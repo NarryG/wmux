@@ -146,6 +146,11 @@ const SOURCE_LINE_RE = /[=;{}]|const |let |var |function |det\.feed|\/(?:bypass|
 // exactly how the two drift apart again.
 let CLAUDE_WAITING_PATTERNS: RegExp[] = [];
 
+// OMP's startup card and OSC title use the `omp vX.Y.Z` and `π <state>` forms
+// captured from omp 18.1.15. The banner/title is a stable identity signal; the
+// boxed `π >` row is the only prompt-shaped chrome used for the screen fallback.
+const OMP_BANNER_RE = /^omp\s+v?\d+(?:\.\d+){1,3}\b/i;
+const OMP_READY_RE = /^╭.*π\s*>\s+.*╮$/;
 const AGENT_PATTERNS: AgentPattern[] = [
   // ── Claude Code ────────────────────────────────────────────────────────────
   // Gate: compound — banner AND prompt (checkGates handles the two-signal
@@ -369,6 +374,19 @@ const AGENT_PATTERNS: AgentPattern[] = [
       { regex: /Grok\s+\d+(?:\.\d+)?\s+\([^)]+\)\s*·\s*always-approve/, status: 'waiting', message: 'Ready for input' },
     ],
   },
+
+  // ── Oh My Pi ──────────────────────────────────────────────────────────────
+  // Captured from the live omp 18.1.15 startup card and composer row. The
+  // banner opens the identity gate; the boxed π prompt is the screen fallback
+  // for a session whose lifecycle extension is not installed.
+  {
+    agent: 'Oh My Pi',
+    slug: 'omp',
+    gate: OMP_BANNER_RE,
+    patterns: [
+      { regex: OMP_READY_RE, status: 'waiting', message: 'Ready for input' },
+    ],
+  },
 ];
 
 // Derive the Claude waiting patterns from the table above so the gate replay
@@ -463,6 +481,16 @@ function isGrokChrome(line: string): boolean {
     return true;
   }
   return false;
+}
+
+
+function isOmpBannerChrome(line: string): boolean {
+  // OMP keeps the session identity in its OSC title after the welcome card
+  // scrolls away: `π >`, `π :` (Windows working), or `π !` (attention).
+  if (/\x1b\]0;π\s*(?:>|:|!)(?:\s|$)/.test(line)) return true;
+  const stripped = stripAnsi(line);
+  if (SOURCE_LINE_RE.test(stripped)) return false;
+  return OMP_BANNER_RE.test(visibleChrome(stripped));
 }
 
 export class AgentDetector {
@@ -697,7 +725,9 @@ export class AgentDetector {
           ? this.claudeBannerSeen && this.claudePromptSeen
           : ap.slug === 'grok'
             ? candidateLines(clean).some(isGrokChrome)
-            : ap.gate.test(clean);
+            : ap.slug === 'omp'
+              ? candidateLines(clean).some(isOmpBannerChrome)
+              : ap.gate.test(clean);
       if (!gateMatched) continue;
 
       this.activeAgents.add(ap.agent);

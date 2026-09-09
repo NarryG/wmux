@@ -11,6 +11,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import {
+  ensureStartMenuShortcut,
+  removeStartMenuShortcut,
   runShortcutRepairPass,
   stageRootIcon,
   type RepairLocations,
@@ -118,6 +120,57 @@ describe.skipIf(!onWindows)('shortcutHygiene end-to-end (real .lnk, real PowerSh
     if (failure) throw new Error(`shortcut repair pass did not run: ${failure}`);
     return actions;
   };
+
+  it('creates and removes a fallback Start Menu link', () => {
+    const appData = path.join(sandbox, 'AppData', 'Roaming');
+    const previous = process.env.APPDATA;
+    process.env.APPDATA = appData;
+    try {
+      expect(ensureStartMenuShortcut(execPath)).toBe(true);
+      const link = path.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'wmux.lnk');
+      expect(readLnk(link).target.toLowerCase()).toBe(path.join(root, 'wmux.exe').toLowerCase());
+      expect(removeStartMenuShortcut(execPath)).toBe(true);
+      expect(fs.existsSync(link)).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.APPDATA;
+      else process.env.APPDATA = previous;
+    }
+  });
+
+  it('targets the current executable when the Squirrel root stub is missing', () => {
+    fs.rmSync(path.join(root, 'wmux.exe'));
+    const appData = path.join(sandbox, 'AppData', 'Roaming');
+    const previous = process.env.APPDATA;
+    process.env.APPDATA = appData;
+    try {
+      expect(ensureStartMenuShortcut(execPath)).toBe(true);
+      const link = path.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'wmux.lnk');
+      expect(readLnk(link).target.toLowerCase()).toBe(execPath.toLowerCase());
+    } finally {
+      if (previous === undefined) delete process.env.APPDATA;
+      else process.env.APPDATA = previous;
+    }
+  });
+
+  it('preserves a same-name foreign Start Menu link', () => {
+    const appData = path.join(sandbox, 'AppData', 'Roaming');
+    const link = path.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'wmux.lnk');
+    const foreignTarget = path.join(sandbox, 'other.exe');
+    fs.writeFileSync(foreignTarget, 'foreign');
+    fs.mkdirSync(path.dirname(link), { recursive: true });
+    makeLnk(link, foreignTarget);
+    const previous = process.env.APPDATA;
+    process.env.APPDATA = appData;
+    try {
+      expect(ensureStartMenuShortcut(execPath)).toBe(true);
+      expect(readLnk(link).target.toLowerCase()).toBe(foreignTarget.toLowerCase());
+      expect(removeStartMenuShortcut(execPath)).toBe(true);
+      expect(fs.existsSync(link)).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.APPDATA;
+      else process.env.APPDATA = previous;
+    }
+  });
 
   it('retargets a dead versioned pin to the stub and pins its icon to app.ico', () => {
     const pin = path.join(pinDir, 'wmux-pin.lnk');

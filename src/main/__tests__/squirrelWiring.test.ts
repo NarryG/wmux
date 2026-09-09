@@ -115,6 +115,18 @@ describe('Squirrel firstrun fix — index.ts wiring invariants', () => {
       /spawn\(process\.execPath, \[\], \{ detached: true, stdio: 'ignore', windowsHide: true \}\)\.unref\(\)/,
     );
   });
+  it('keeps the wmux app in the Start Menu across install and update', () => {
+    expect(indexSrc).toContain(
+      "const installShortcutArgs = ['--createShortcut', target, '--shortcut-locations', 'Desktop,StartMenu'];",
+    );
+    expect(indexSrc).toContain(
+      "const updateShortcutArgs = ['--createShortcut', target, '--shortcut-locations', 'Desktop,StartMenu'];",
+    );
+  });
+  it('falls back to a direct Start Menu link when Squirrel metadata is unavailable', () => {
+    expect(indexSrc).toContain('shortcutHygiene.ensureStartMenuShortcut(process.execPath)');
+    expect(indexSrc).toContain('shortcutHygiene.removeStartMenuShortcut(process.execPath)');
+  });
 
   it('the predicate classifies by exact membership, never a startsWith prefix', () => {
     // The most realistic regression is moving the logic into squirrel.ts and

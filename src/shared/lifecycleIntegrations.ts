@@ -12,8 +12,12 @@ import {
 /** Stable bundle/install names for first-party lifecycle integrations. */
 export const OPENCODE_PLUGIN_BUNDLE_BASENAME = 'wmux-opencode-plugin.js';
 export const OPENCODE_PLUGIN_INSTALL_BASENAME = 'wmux.js';
+export const OMP_EXTENSION_BUNDLE_BASENAME = 'wmux-omp-extension.ts';
+export const OMP_EXTENSION_INSTALL_BASENAME = 'wmux.ts';
 export const CODEX_NOTIFY_MANAGED_MARKER = 'wmux ↔ Codex CLI notify bridge';
 export const OPENCODE_PLUGIN_MANAGED_MARKER = 'wmux-managed: opencode-lifecycle-bridge';
+export const OMP_EXTENSION_MANAGED_MARKER = 'wmux-managed: omp-lifecycle-bridge';
+export const OMP_EXTENSION_LEGACY_MARKER = 'wmux-managed: pi-family-lifecycle-bridge';
 
 export type LifecycleAssetState =
   | 'current'
@@ -150,6 +154,7 @@ export interface LifecycleIntegrationPaths {
   home: string;
   codex: LifecycleAssetSpec;
   opencode: LifecycleAssetSpec;
+  omp: LifecycleAssetSpec;
 }
 
 function resolveOpenCodeConfigHome(home: string): string {
@@ -185,6 +190,15 @@ export function resolveLifecycleIntegrationPaths(home: string, startDir: string)
       ),
       ownershipMarkers: [OPENCODE_PLUGIN_MANAGED_MARKER, 'wmux ↔ OpenCode plugin bridge'],
     },
+    omp: {
+      sourcePath: findLifecycleAssetSourceFrom(
+        startDir,
+        OMP_EXTENSION_BUNDLE_BASENAME,
+        ['integrations', 'omp', OMP_EXTENSION_INSTALL_BASENAME],
+      ),
+      destinationPath: path.join(home, '.omp', 'agent', 'extensions', OMP_EXTENSION_INSTALL_BASENAME),
+      ownershipMarkers: [OMP_EXTENSION_MANAGED_MARKER, OMP_EXTENSION_LEGACY_MARKER],
+    },
   };
 }
 
@@ -197,6 +211,7 @@ export interface LifecycleIntegrationsStatus {
   codexBridge: LifecycleAssetStatus;
   codexNotify: LifecycleCodexNotifyStatus;
   opencodePlugin: LifecycleAssetStatus;
+  ompExtension: LifecycleAssetStatus;
 }
 
 const normalizePath = (value: string): string => value.replace(/\\/g, '/');
@@ -215,6 +230,7 @@ export function statusLifecycleIntegrations(paths: LifecycleIntegrationPaths): L
     codexBridge: inspectLifecycleAsset(paths.codex),
     codexNotify,
     opencodePlugin: inspectLifecycleAsset(paths.opencode),
+    ompExtension: inspectLifecycleAsset(paths.omp),
   };
 }
 
@@ -223,9 +239,10 @@ export interface LifecycleIntegrationsInstallOutcome {
   codexBridge: LifecycleAssetInstallOutcome;
   codexNotify: RegisterNotifyResult | null;
   opencodePlugin: LifecycleAssetInstallOutcome;
+  ompExtension: LifecycleAssetInstallOutcome;
 }
 
-/** Install/refresh runtime assets and register Codex notify without clobbering conflicts. */
+/** Install/refresh runtime assets and register lifecycle bridges without clobbering conflicts. */
 export function installLifecycleIntegrations(
   paths: LifecycleIntegrationPaths,
 ): LifecycleIntegrationsInstallOutcome {
@@ -234,11 +251,20 @@ export function installLifecycleIntegrations(
     ? registerCodexNotify(paths.home, paths.codex.destinationPath)
     : null;
   const opencodePlugin = installLifecycleAsset(paths.opencode);
+  const ompInstalled = fs.existsSync(path.dirname(path.dirname(paths.omp.destinationPath)))
+    || fs.existsSync(paths.omp.destinationPath);
+  const ompExtension = ompInstalled
+    ? installLifecycleAsset(paths.omp)
+    : { ...inspectLifecycleAsset(paths.omp), action: 'none' as const };
   const fatalStates = new Set<LifecycleAssetState>(['source-missing', 'error']);
   return {
-    ok: !fatalStates.has(codexBridge.state) && !fatalStates.has(opencodePlugin.state),
+    ok:
+      !fatalStates.has(codexBridge.state)
+      && !fatalStates.has(opencodePlugin.state)
+      && (!ompInstalled || !fatalStates.has(ompExtension.state)),
     codexBridge,
     codexNotify,
     opencodePlugin,
+    ompExtension,
   };
 }

@@ -172,6 +172,17 @@ describe('ResumeInfoChip render smoke', () => {
     expect(html).not.toContain(binding.sessionId);
   });
 
+  it('uses the canonical display name for OMP', () => {
+    const html = renderToStaticMarkup(
+      createElement(ResumeInfoChip, {
+        ptyId: 'pty-omp',
+        binding: { ...binding, agent: 'omp' },
+        paneCwds: ['/Users/me/proj'],
+      }),
+    );
+    expect(html).toContain('Resume Oh My Pi');
+    expect(html).not.toContain('Resume Omp');
+  });
   it('renders nothing for a non-resumable agent', () => {
     const html = renderToStaticMarkup(
       createElement(ResumeInfoChip, {

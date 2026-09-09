@@ -238,6 +238,7 @@ const BODY_PREVIEW_AGENTS: ReadonlySet<string> = new Set([
   'aider',
   'opencode',
   'copilot',
+  'omp',
 ]);
 
 /** Whether a nudge into this pane may carry the message body at all. */

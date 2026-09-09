@@ -40,7 +40,7 @@ export function externalRegistrationSkipReason(): string | null {
 
 export interface McpTarget {
   /** Stable id used in status payloads, CLI `--target`, and UI keys. */
-  id: 'claude' | 'codex' | 'gemini';
+  id: 'claude' | 'codex' | 'gemini' | 'omp';
   /** Human label for Settings / CLI output. */
   displayName: string;
   /** Config file syntax. Drives which `configIO` adapter is used. */
@@ -50,8 +50,8 @@ export interface McpTarget {
   /**
    * When false, wmux NEVER creates this target's config file — it only writes
    * if the file already exists. Claude owns `~/.claude.json` so it is created
-   * on demand; Codex/Gemini configs belong to those tools and are only touched
-   * when the user has them installed (their CLI created the file).
+   * on demand; Codex/Gemini/OMP configs belong to those tools and are only
+   * touched when the user has them installed (their CLI created the file).
    */
   createIfMissing: boolean;
   /**
@@ -93,6 +93,14 @@ export const MCP_TARGETS: readonly McpTarget[] = [
     configPath: (home) => path.join(home, '.gemini', 'settings.json'),
     createIfMissing: false,
     verified: false,
+  },
+  {
+    id: 'omp',
+    displayName: 'Oh My Pi',
+    format: 'json',
+    configPath: (home) => path.join(home, '.omp', 'agent', 'mcp.json'),
+    createIfMissing: false,
+    verified: true,
   },
 ];
 

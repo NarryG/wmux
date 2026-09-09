@@ -80,7 +80,7 @@ export function sanitizeOrchRole(raw: unknown): string | undefined {
  *  it is control-char stripped, shell-metachar rejected, and length-capped at
  *  every boundary (see normalizeArgsField). */
 export interface RoleBinding {
-  /** Launcher stem this role expects: 'claude' | 'codex' | 'opencode' | 'gemini'.
+  /** Launcher stem this role expects: 'claude' | 'codex' | 'omp' | 'opencode' | 'gemini'.
    *  REQUIRED for model injection: a model alias is meaningless without knowing
    *  whose `--model` grammar it belongs to (`codex --model haiku` is an invalid
    *  launch), so a model-only binding never injects — see applyRoleBinding. */
@@ -97,8 +97,8 @@ export type OrchestratorRoleBindings = Record<string, RoleBinding>;
 /** Per-agent model-flag grammar (sibling of agentResume's RESUME_BY_LAUNCHER).
  *  ONLY agents whose `--model` grammar is empirically verified live here; an
  *  absent agent (gemini/aider/opencode) yields a no-op + advisory note rather
- *  than a guessed, possibly-broken flag. claude + codex `--model <m>` are
- *  verified in agentResume.test.ts (`codex --model gpt-5.5`, `claude --model`). */
+ *  than a guessed, possibly-broken flag. Claude, Codex, and OMP all expose
+ *  `--model <m>`; see the launcher help and orchestratorRole.binding.test.ts. */
 interface ModelFlagGrammar {
   /** Render the model flag tokens inserted right after the launcher token. */
   flag: (model: string) => string;
@@ -106,10 +106,11 @@ interface ModelFlagGrammar {
 const MODEL_FLAG_BY_LAUNCHER: Readonly<Record<string, ModelFlagGrammar>> = {
   claude: { flag: (m) => `--model ${m}` },
   codex: { flag: (m) => `--model ${m}` },
+  omp: { flag: (m) => `--model ${m}` },
   // opencode/gemini/aider deliberately absent — their `--model` CLI grammar is
-  // NOT verified anywhere in the repo (integrations/ + agentResume both cover
-  // only claude/codex). Binding a role to them is a no-op + note (D-5), never a
-  // fabricated flag. Add them here once their grammar is confirmed.
+  // NOT verified anywhere in the repo. Binding a role to them is a no-op +
+  // note (D-5), never a fabricated flag. Add them once their grammar is
+  // confirmed.
 };
 
 /** Whether wmux knows how to inject a model flag for a launcher stem. */
@@ -206,6 +207,7 @@ export const KNOWN_AGENT_STEMS: ReadonlySet<string> = new Set([
   'copilot',
   'openclaude',
   'kiro-cli',
+  'omp',
 ]);
 
 /** Max lengths for the binding fields at the normalization boundary. `args` is
