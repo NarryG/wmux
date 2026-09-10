@@ -360,8 +360,6 @@ export function ensureStartMenuShortcut(execPath: string): boolean {
   if (process.platform !== 'win32') return false;
   const appData = process.env.APPDATA;
   if (!appData) return false;
-  const { shortcut } = startMenuPaths(appData);
-  if (fs.existsSync(shortcut)) return true;
   const script = buildStartMenuShortcutScript(rootFromExecPath(execPath), appData, execPath);
   return script ? runStartMenuShortcutScript(script) : false;
 }
